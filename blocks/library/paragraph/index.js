@@ -63,6 +63,8 @@ class ParagraphBlock extends Component {
 		this.bindRef = this.bindRef.bind( this );
 		this.onReplace = this.onReplace.bind( this );
 		this.toggleDropCap = this.toggleDropCap.bind( this );
+		this.getFontSize = this.getFontSize.bind( this );
+		this.setFontSize = this.setFontSize.bind( this );
 	}
 
 	onReplace( blocks ) {
@@ -91,10 +93,38 @@ class ParagraphBlock extends Component {
 		this.nodeRef = node;
 	}
 
-	setFontSize( fontSize ) {
-		const { setAttributes } = this.props;
+	getFontSize() {
+		const { customFontSize, fontSize } = this.props.attributes;
+		if ( fontSize ) {
+			const fontSizeValue = FONT_SIZES[ fontSize ];
+			if ( fontSizeValue ) {
+				return fontSizeValue;
+			}
+			const fontSizeNumeric = parseInt( fontSize ); //compatibility with old font size attribute.
+			if ( fontSizeNumeric ) {
+				return fontSizeNumeric;
+			}
+		}
 
-		setAttributes( { fontSize } );
+		if ( customFontSize ) {
+			return customFontSize;
+		}
+	}
+
+	setFontSize( fontSizeValue ) {
+		const { setAttributes } = this.props;
+		const thresholdFontSize = findKey( FONT_SIZES, ( size ) => size === fontSizeValue );
+		if ( thresholdFontSize ) {
+			setAttributes( {
+				fontSize: thresholdFontSize,
+				customFontSize: undefined,
+			} );
+			return;
+		}
+		setAttributes( {
+			fontSize: undefined,
+			customFontSize: fontSizeValue,
+		} );
 	}
 
 	render() {
@@ -113,11 +143,12 @@ class ParagraphBlock extends Component {
 			content,
 			dropCap,
 			placeholder,
-			fontSize,
 			backgroundColor,
 			textColor,
 			width,
 		} = attributes;
+
+		const fontSize = this.getFontSize();
 
 		return [
 			isSelected && (
@@ -154,7 +185,7 @@ class ParagraphBlock extends Component {
 							</ButtonGroup>
 							<Button
 								isLarge
-								onClick={ () => this.setFontSize( null ) }
+								onClick={ () => this.setFontSize( undefined ) }
 							>
 								{ __( 'Reset' ) }
 							</Button>
@@ -282,6 +313,9 @@ const schema = {
 		type: 'string',
 	},
 	fontSize: {
+		type: 'string',
+	},
+	customFontSize: {
 		type: 'number',
 	},
 };
@@ -364,21 +398,20 @@ export const settings = {
 			backgroundColor,
 			textColor,
 			fontSize,
+			customFontSize,
 		} = attributes;
-
-		const thresholdFontSize = findKey( FONT_SIZES, ( size ) => size === fontSize );
 
 		const className = classnames( {
 			[ `align${ width }` ]: width,
 			'has-background': backgroundColor,
 			'has-drop-cap': dropCap,
-			[ `is-${ thresholdFontSize }-text` ]: thresholdFontSize,
+			[ `is-${ fontSize }-text` ]: fontSize && FONT_SIZES[ fontSize ],
 		} );
 
 		const styles = {
 			backgroundColor: backgroundColor,
 			color: textColor,
-			fontSize: thresholdFontSize ? null : fontSize,
+			fontSize: ! fontSize && customFontSize ? customFontSize : undefined,
 			textAlign: align,
 		};
 
